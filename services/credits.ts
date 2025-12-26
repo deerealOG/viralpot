@@ -37,30 +37,14 @@ export const getCreditTasks = (user: any): CreditTask[] => {
       canClaim: canClaimDaily,
       type: 'daily',
     },
-    {
-      id: 'complete_profile',
-      title: '👤 Complete Your Profile',
-      description: 'Add your name and avatar',
-      reward: 5,
-      completed: claimedTasks.includes('complete_profile'),
-      canClaim: !!(user.name && user.avatar) && !claimedTasks.includes('complete_profile'),
-      type: 'onetime',
-    },
-    {
-      id: 'generate_first',
-      title: '✨ Create Your First Content',
-      description: 'Generate an idea or caption',
-      reward: 3,
-      completed: claimedTasks.includes('generate_first'),
-      canClaim: false, // Requires checking saved items history
-      type: 'onetime',
-    },
+
+
   ];
 };
 
 export const PRO_FEATURES = [
   '✨ Unlimited AI Generations',
-  '📊 Advanced Analytics Dashboard',
+
   '🎨 Custom Brand Templates',
   '👥 Team Collaboration (up to 5 members)',
   '📅 Content Calendar & Scheduling',

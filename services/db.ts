@@ -1,11 +1,11 @@
 
-import { User, SavedItem, SavedItemType, IdeaResult, CaptionResult, LastLoginUser } from '../types';
+import { User, LastLoginUser } from '../types';
 
 // Keys for LocalStorage
 const STORAGE_KEYS = {
   USER: 'cv_user',
   LAST_LOGIN: 'cv_last_login',
-  SAVED: 'cv_saved_items',
+
 };
 
 // Simulate API delay
@@ -95,79 +95,5 @@ export const db = {
     }
   },
 
-  saved: {
-    list: async (userId: string): Promise<SavedItem[]> => {
-      await delay(400);
-      const str = localStorage.getItem(STORAGE_KEYS.SAVED);
-      if (!str) return [];
-      const allItems: SavedItem[] = JSON.parse(str);
-      return allItems.filter(item => item.user_id === userId).sort((a, b) => b.created_at - a.created_at);
-    },
 
-    add: async (userId: string, type: SavedItemType, content: any, topic: string, platform: string): Promise<SavedItem> => {
-      await delay(300);
-      const newItem: SavedItem = {
-        id: crypto.randomUUID(),
-        user_id: userId,
-        type,
-        content,
-        topic,
-        platform,
-        created_at: Date.now(),
-      };
-      
-      const str = localStorage.getItem(STORAGE_KEYS.SAVED);
-      const allItems: SavedItem[] = str ? JSON.parse(str) : [];
-      allItems.push(newItem);
-      localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(allItems));
-      
-      return newItem;
-    },
-    
-    delete: async (itemId: string): Promise<void> => {
-       await delay(300);
-       const str = localStorage.getItem(STORAGE_KEYS.SAVED);
-       if(!str) return;
-       let allItems: SavedItem[] = JSON.parse(str);
-       allItems = allItems.filter(i => i.id !== itemId);
-       localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(allItems));
-    },
-    
-    update: async (itemId: string, updates: Partial<SavedItem>): Promise<void> => {
-      await delay(300);
-      const str = localStorage.getItem(STORAGE_KEYS.SAVED);
-      if (!str) return;
-      const allItems: SavedItem[] = JSON.parse(str);
-      const index = allItems.findIndex(i => i.id === itemId);
-      if (index !== -1) {
-        allItems[index] = { ...allItems[index], ...updates };
-        localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(allItems));
-      }
-    },
-
-    toggleFavorite: async (itemId: string): Promise<void> => {
-      await delay(200);
-      const str = localStorage.getItem(STORAGE_KEYS.SAVED);
-      if (!str) return;
-      const allItems: SavedItem[] = JSON.parse(str);
-      const index = allItems.findIndex(i => i.id === itemId);
-      if (index !== -1) {
-        allItems[index].isFavorite = !allItems[index].isFavorite;
-        localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(allItems));
-      }
-    },
-
-    saveAsTemplate: async (itemId: string, templateName: string): Promise<void> => {
-      await delay(300);
-      const str = localStorage.getItem(STORAGE_KEYS.SAVED);
-      if (!str) return;
-      const allItems: SavedItem[] = JSON.parse(str);
-      const index = allItems.findIndex(i => i.id === itemId);
-      if (index !== -1) {
-        allItems[index].isTemplate = true;
-        allItems[index].templateName = templateName;
-        localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(allItems));
-      }
-    }
-  }
 };

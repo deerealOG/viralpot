@@ -5,7 +5,7 @@ import { Button } from '../components/Button';
 import { MagicTextArea } from '../components/MagicTextArea';
 import { ShareButton } from '../components/ShareButton';
 import { generateCampaign } from '../services/gemini';
-import { db } from '../services/db';
+
 import { toast } from '../services/toast';
 import { User, CampaignResult } from '../types';
 
@@ -19,7 +19,7 @@ export const BusinessHub: React.FC<BusinessHubProps> = ({ user, updateUser }) =>
   const [goal, setGoal] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CampaignResult | null>(null);
-  const [saving, setSaving] = useState(false);
+
 
   const handleGenerate = async () => {
       if(!product || !goal) return;
@@ -41,13 +41,7 @@ export const BusinessHub: React.FC<BusinessHubProps> = ({ user, updateUser }) =>
       }
   };
 
-  const handleSave = async () => {
-      if(!result) return;
-      setSaving(true);
-      await db.saved.add(user.id, 'campaign', result, `Launch: ${result.campaignName}`, 'Multi-channel');
-      setSaving(false);
-      toast.success('Campaign saved to vault!');
-  };
+
 
   return (
     <div className="space-y-8 pb-12">
@@ -116,9 +110,7 @@ export const BusinessHub: React.FC<BusinessHubProps> = ({ user, updateUser }) =>
                         ))}
                     </div>
 
-                    <Button variant="secondary" fullWidth onClick={handleSave} disabled={saving}>
-                        {saving ? 'Saving...' : 'Save Campaign to Vault'}
-                    </Button>
+
                 </div>
             )}
         </div>

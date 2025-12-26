@@ -1,10 +1,9 @@
-
 export interface User {
   id: string;
   email: string;
   name?: string;
   avatar?: string;
-  role: 'creator' | 'business' | 'agency';
+  role: "creator" | "business" | "agency";
   created_at: number;
   niche?: string;
   platforms?: string[];
@@ -13,29 +12,9 @@ export interface User {
   isGuest?: boolean;
 }
 
-export interface LastLoginUser {
-  email: string;
-  name: string;
-  avatar: string;
-  role: 'creator' | 'business' | 'agency';
-  lastSeen: number;
-}
+export type Platform = 'instagram' | 'tiktok' | 'youtube' | 'linkedin' | 'x' | 'facebook';
 
-export type SavedItemType = 'idea' | 'caption' | 'campaign' | 'audit';
-
-export interface SavedItem {
-  id: string;
-  user_id: string;
-  type: SavedItemType;
-  content: IdeaResult | CaptionResult | CampaignResult | AuditResult;
-  topic: string;
-  platform: string; 
-  created_at: number;
-  images?: string[];
-  isFavorite?: boolean;
-  isTemplate?: boolean;
-  templateName?: string;
-}
+export type PostType = 'reel' | 'carousel' | 'post' | 'video' | 'short' | 'thread' | 'article' | 'story';
 
 export interface Strategy {
   bestTime: string;
@@ -43,38 +22,33 @@ export interface Strategy {
   visualAdvice?: string;
 }
 
+export interface IdeaDetail {
+  title: string;
+  blueprint: {
+    hook: string;
+    body: string;
+    cta: string;
+  };
+  viral_score: number;
+  why_it_works: string;
+}
+
 export interface IdeaResult {
-  ideas: string[];
-  hook: string;
-  strategy: Strategy;
+  ideas: IdeaDetail[];
+  overall_strategy: Strategy;
+  platform: Platform;
+  postType: PostType;
+  tone: string;
+  goal: string;
 }
 
 export interface CaptionResult {
   captions: string[];
   hashtags: string[];
-  strategy: Strategy;
+  overall_strategy: Strategy;
+  platform: Platform;
+  tone: string;
+  goal: string;
 }
 
-// Business Specific
-export interface DayPlan {
-    day: string;
-    focus: string;
-    contentIdea: string;
-}
-
-export interface CampaignResult {
-    campaignName: string;
-    targetAudience: string;
-    weeklyPlan: DayPlan[];
-    kpi: string;
-}
-
-// Agency Specific
-export interface AuditResult {
-    clientNiche: string;
-    contentGaps: string[];
-    competitorAnalysis: string;
-    recommendedPillars: string[];
-}
-
-export type NavTab = 'home' | 'idea' | 'caption' | 'business' | 'agency' | 'history' | 'profile' | 'analytics';
+export type NavTab = "home" | "idea" | "caption" | "contact" | "info" | "signin" | "signup" | "pricing" | "profile" | "analytics";

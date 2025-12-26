@@ -1,115 +1,125 @@
+import { IdeaResult, CaptionResult } from "../types";
 
-import Groq from "groq-sdk";
-import { IdeaResult, CaptionResult, CampaignResult, AuditResult } from "../types";
+// Groq API Configuration
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
+// Models to try (in order of preference)
+const MODELS = ["llama-3.3-70b-versatile", "llama3-70b-8192", "mixtral-8x7b-32768"];
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY || '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';
+/**
+ * Make a request to the Groq API using fetch (browser-compatible)
+ */
+async function callGroqAPI(messages: { role: string; content: string }[], model: string): Promise<string> {
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${GROQ_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 2048,
+    }),
+  });
 
-const groq = new Groq({ 
-  apiKey: GROQ_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Groq API error (${response.status}): ${errorText}`);
+  }
 
-// Fast models for quick responses, with fallback
-const MODELS = ["mixtral-8x7b-32768", "llama3-70b-8192", "gemma-7b-it"];
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
+/**
+ * Generate content using Groq API with model fallback
+ */
 async function generateWithGroq(prompt: string): Promise<string> {
+  const messages = [
+    {
+      role: "system",
+      content: "You are an expert social media strategist and content creator. Always return valid JSON when requested. Be creative, engaging, and trend-aware."
+    },
+    { role: "user", content: prompt }
+  ];
+
   for (const model of MODELS) {
-      try {
-        const completion = await groq.chat.completions.create({
-          messages: [{ role: "user", content: prompt }],
-          model: model,
-          temperature: 0.7,
-          max_tokens: 2048,
-        });
-        return completion.choices[0]?.message?.content || "";
-      } catch (error) {
-        console.warn(`Groq Model ${model} failed:`, error);
-        // Continue to next model
-      }
+    try {
+      console.log(`[Groq] Trying model: ${model}`);
+      const result = await callGroqAPI(messages, model);
+      console.log(`[Groq] Success with model: ${model}`);
+      return result;
+    } catch (error: any) {
+      console.warn(`[Groq] Model ${model} failed:`, error?.message || error);
+      // Continue to next model
+    }
   }
   throw new Error("AI generation failed. Please check your internet connection or API key.");
 }
 
-export const enhanceText = async (input: string, context: 'idea' | 'caption' | 'business' | 'agency'): Promise<string> => {
-    if (!input.trim()) return "";
-    
-    const prompt = `You are a creative assistant. Rewrite this input to be more descriptive and professional for ${context} generation: "${input}". Keep it concise (max 2 sentences). Return ONLY the rewritten text, no explanations.`;
-
-    try {
-        const result = await generateWithGroq(prompt);
-        return result.trim() || input;
-    } catch (e) {
-        console.error("Enhance error", e);
-        return input;
-    }
+/**
+ * Parse JSON from LLM response, handling various edge cases
+ */
+function parseJSONResponse<T>(response: string): T {
+  // Remove markdown code blocks if present
+  let cleaned = response
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+  
+  // Find the first { and last } to extract JSON object
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+  
+  return JSON.parse(cleaned) as T;
 }
 
-export const generateSuggestion = async (context: 'idea' | 'caption' | 'business' | 'agency', user: any): Promise<string> => {
-    const niche = user.niche || 'General';
-    const bio = user.bio || 'Content Creator';
-    const role = user.role || 'creator';
-    let prompt = "";
-
-    if (context === 'idea') {
-        prompt = `Suggest a trending content topic for a ${role} in the "${niche}" niche. Bio: "${bio}". Return ONLY the topic sentence, nothing else.`;
-    } else if (context === 'caption') {
-        prompt = `Write a short, engaging caption starter for a ${role} in the "${niche}" niche. Bio: "${bio}". Return ONLY the text, nothing else.`;
-    } else if (context === 'business') {
-        prompt = `Suggest a product name or campaign goal for a business in the "${niche}" niche. Return ONLY the text.`;
-    } else if (context === 'agency') {
-        prompt = `Suggest a potential client niche or industry for a marketing agency. Return ONLY the text.`;
-    } else if (context === 'bio') {
-        prompt = `Write a short, professional bio (under 150 chars) for a ${role} in the "${niche}" niche. Platforms: ${user.platforms?.join(', ')}. Return ONLY the bio text.`;
-    }
-
-    try {
-        const result = await generateWithGroq(prompt);
-        return result.trim();
-    } catch (e) {
-        console.error("Suggestion error", e);
-        return "";
-    }
-}
-
-export const rewriteViral = async (text: string): Promise<string> => {
-    const prompt = `Rewrite this social media caption to be extremely viral and engaging. Use modern slang but keep it readable. Add emojis tastefully. Return ONLY the new caption:\n\n"${text}"`;
-
-    try {
-        const result = await generateWithGroq(prompt);
-        return result.trim() || text;
-    } catch (e) {
-        return text;
-    }
-}
-
-export const generateIdeas = async (topic: string, tone: string, platform: string, postType: string): Promise<IdeaResult> => {
+/**
+ * Generate viral content ideas based on topic and parameters
+ */
+export const generateIdeas = async (
+  topic: string, 
+  tone: string, 
+  platform: string, 
+  postType: string
+): Promise<IdeaResult> => {
   const prompt = `Generate 3 viral content ideas for ${platform} ${postType} about "${topic}" with a ${tone} tone.
 
-Return ONLY valid JSON in this exact format (no markdown, no code blocks):
+You are an expert content strategist. Create ideas that are:
+- Highly engaging and shareable
+- Tailored specifically to ${platform}'s audience and algorithm
+- Using current trends and best practices for ${postType} format
+
+Return ONLY valid JSON in this exact format (no markdown, no extra text):
 {
-  "ideas": ["idea 1", "idea 2", "idea 3"],
-  "hook": "a catchy hook sentence",
+  "ideas": ["detailed idea 1 with specific angle", "detailed idea 2 with specific angle", "detailed idea 3 with specific angle"],
+  "hook": "A scroll-stopping hook that grabs attention in the first 2 seconds",
   "strategy": {
-    "bestTime": "best posting time",
-    "postingTips": ["tip 1", "tip 2", "tip 3"],
-    "visualAdvice": "visual content advice"
+    "bestTime": "specific best posting time with timezone consideration",
+    "postingTips": ["actionable tip 1", "actionable tip 2", "actionable tip 3"],
+    "visualAdvice": "specific visual content advice for maximum engagement"
   }
 }`;
 
   try {
     const result = await generateWithGroq(prompt);
-    // Clean any markdown formatting
-    const cleaned = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    return JSON.parse(cleaned) as IdeaResult;
+    return parseJSONResponse<IdeaResult>(result);
   } catch (error) {
     console.error("Generate ideas error:", error);
     throw new Error("Failed to generate ideas. Please try again.");
   }
 };
 
+/**
+ * Generate engaging captions for social media posts
+ */
 export const generateCaptions = async (
   topic: string, 
   tone: string, 
@@ -117,22 +127,30 @@ export const generateCaptions = async (
   postType: string,
   images: string[] = []
 ): Promise<CaptionResult> => {
-  const imageContext = images.length > 0 ? ` (with ${images.length} image(s))` : '';
+  const imageContext = images.length > 0 ? ` The post includes ${images.length} image(s).` : '';
   
-  const prompt = `Create 3 social media captions for ${platform} ${postType} about "${topic}"${imageContext} with ${tone} tone.
+  const prompt = `Create 3 social media captions for ${platform} ${postType} about "${topic}".${imageContext}
 
-1. Short & Punchy (1-2 lines)
-2. Medium & Engaging with question/CTA
-3. Long storytelling caption with value
+Tone: ${tone}
 
-Also provide 15 relevant hashtags and posting strategy.
+You are an expert copywriter. Create captions that are:
+- Optimized for ${platform}'s algorithm
+- Designed to maximize engagement (likes, comments, shares)
+- Using platform-appropriate language and emoji usage
 
-Return ONLY valid JSON (no markdown):
+Create these 3 caption styles:
+1. SHORT & PUNCHY: 1-2 lines, high impact, scroll-stopping
+2. ENGAGING QUESTION: Medium length with a question or CTA that drives comments
+3. STORYTELLING: Longer format that provides value and builds connection
+
+Also provide 15 highly relevant hashtags (mix of popular and niche-specific).
+
+Return ONLY valid JSON (no markdown, no extra text):
 {
-  "captions": ["caption 1", "caption 2", "caption 3"],
-  "hashtags": ["hashtag1", "hashtag2", ...15 total],
+  "captions": ["short punchy caption here", "engaging question caption here", "storytelling caption here"],
+  "hashtags": ["hashtag1", "hashtag2", "hashtag3", "hashtag4", "hashtag5", "hashtag6", "hashtag7", "hashtag8", "hashtag9", "hashtag10", "hashtag11", "hashtag12", "hashtag13", "hashtag14", "hashtag15"],
   "strategy": {
-    "bestTime": "best time to post",
+    "bestTime": "specific best posting time for this content type",
     "postingTips": ["tip 1", "tip 2", "tip 3"],
     "visualAdvice": "advice for visual content"
   }
@@ -140,59 +158,106 @@ Return ONLY valid JSON (no markdown):
 
   try {
     const result = await generateWithGroq(prompt);
-    const cleaned = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    return JSON.parse(cleaned) as CaptionResult;
+    return parseJSONResponse<CaptionResult>(result);
   } catch (error) {
     console.error("Generate captions error:", error);
     throw new Error("Failed to generate captions. Please try again.");
   }
 };
 
-export const generateCampaign = async (productName: string, goal: string): Promise<CampaignResult> => {
-    const prompt = `Create a 5-day social media campaign for product "${productName}" with goal: "${goal}".
+/**
+ * Rewrite a caption to make it more viral
+ */
+export const rewriteViral = async (text: string): Promise<string> => {
+  const prompt = `You are a viral content expert. Rewrite this social media caption to be extremely viral and engaging:
 
-Return ONLY valid JSON (no markdown):
-{
-  "campaignName": "catchy campaign name",
-  "targetAudience": "target audience description",
-  "kpi": "key performance indicator",
-  "weeklyPlan": [
-    {"day": "Day 1", "focus": "focus area", "contentIdea": "specific content idea"},
-    {"day": "Day 2", "focus": "focus area", "contentIdea": "specific content idea"},
-    {"day": "Day 3", "focus": "focus area", "contentIdea": "specific content idea"},
-    {"day": "Day 4", "focus": "focus area", "contentIdea": "specific content idea"},
-    {"day": "Day 5", "focus": "focus area", "contentIdea": "specific content idea"}
-  ]
-}`;
+"${text}"
 
-    try {
-        const result = await generateWithGroq(prompt);
-        const cleaned = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        return JSON.parse(cleaned) as CampaignResult;
-    } catch(e) {
-        console.error(e);
-        throw new Error("Failed to generate campaign.");
-    }
+Rules:
+- Make it scroll-stopping and highly shareable
+- Use conversational, authentic language
+- Add appropriate emojis (not too many)
+- Keep the core message but amplify the emotion
+- Make it feel personal and relatable
+
+Return ONLY the rewritten caption, nothing else.`;
+
+  try {
+    const result = await generateWithGroq(prompt);
+    return result.trim() || text;
+  } catch (e) {
+    console.error("Rewrite viral error:", e);
+    return text;
+  }
 };
 
-export const generateAudit = async (clientNiche: string): Promise<AuditResult> => {
-    const prompt = `Perform a social media audit for "${clientNiche}" niche.
+/**
+ * Enhance user input text to be more descriptive
+ */
+export const enhanceText = async (
+  input: string, 
+  context: 'idea' | 'caption'
+): Promise<string> => {
+  if (!input.trim()) return "";
+  
+  const prompt = `You are a creative assistant. Rewrite this input to be more descriptive and compelling for ${context} generation:
 
-Return ONLY valid JSON (no markdown):
-{
-  "clientNiche": "${clientNiche}",
-  "contentGaps": ["gap 1", "gap 2", "gap 3"],
-  "competitorAnalysis": "brief competitor analysis",
-  "recommendedPillars": ["pillar 1", "pillar 2", "pillar 3", "pillar 4"]
-}`;
+"${input}"
 
-    try {
-        const result = await generateWithGroq(prompt);
-        const cleaned = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        return JSON.parse(cleaned) as AuditResult;
-    } catch(e) {
-        console.error(e);
-        throw new Error("Failed to generate audit.");
-    }
+Rules:
+- Keep it concise (max 2 sentences)
+- Make it more specific and actionable
+- Preserve the original intent
+
+Return ONLY the rewritten text, no explanations.`;
+
+  try {
+    const result = await generateWithGroq(prompt);
+    return result.trim() || input;
+  } catch (e) {
+    console.error("Enhance error", e);
+    return input;
+  }
 };
 
+/**
+ * Generate a suggestion for the user based on context
+ */
+export const generateSuggestion = async (
+  context: 'idea' | 'caption', 
+  user: any
+): Promise<string> => {
+  const niche = user.niche || 'General';
+  const bio = user.bio || 'Content Creator';
+  const role = user.role || 'creator';
+  
+  let prompt = "";
+
+  if (context === 'idea') {
+    prompt = `Suggest ONE trending content topic for a ${role} in the "${niche}" niche. Bio: "${bio}". 
+    
+The topic should be:
+- Currently trending or evergreen
+- Specific and actionable
+- Engaging for social media
+
+Return ONLY the topic sentence, nothing else.`;
+  } else if (context === 'caption') {
+    prompt = `Write ONE short, engaging caption starter for a ${role} in the "${niche}" niche. Bio: "${bio}".
+
+The caption should be:
+- Attention-grabbing opening line
+- Authentic and relatable
+- Ready to be expanded
+
+Return ONLY the text, nothing else.`;
+  }
+
+  try {
+    const result = await generateWithGroq(prompt);
+    return result.trim();
+  } catch (e) {
+    console.error("Suggestion error", e);
+    return "";
+  }
+};

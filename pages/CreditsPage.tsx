@@ -3,7 +3,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { User } from '../types';
 import { getCreditTasks, CREDIT_PACKAGES, PRO_FEATURES, PRO_PRICE } from '../services/credits';
-import { db } from '../services/db';
+
 import { toast } from '../services/toast';
 
 interface CreditsPageProps {
@@ -13,29 +13,11 @@ interface CreditsPageProps {
 
 export const CreditsPage: React.FC<CreditsPageProps> = ({ user, updateUser }) => {
   const [claiming, setClaiming] = useState<string | null>(null);
-  const [hasGenerated, setHasGenerated] = useState(false);
-
-  useEffect(() => {
-    const checkHistory = async () => {
-       const history = await db.saved.list(user.id);
-       if (history.length > 0) {
-           setHasGenerated(true);
-       }
-    };
-    checkHistory();
-  }, [user.id]);
 
   const tasks = React.useMemo(() => {
       const t = getCreditTasks(user);
-      // Override generate_first based on history check
-      const genTask = t.find(x => x.id === 'generate_first');
-      if (genTask) {
-          const claimed = user.claimed_tasks?.includes('generate_first');
-          genTask.canClaim = hasGenerated && !claimed;
-          genTask.completed = !!claimed;
-      }
       return t;
-  }, [user, hasGenerated]);
+  }, [user]);
 
   const handleClaimTask = async (taskId: string) => {
     setClaiming(taskId);

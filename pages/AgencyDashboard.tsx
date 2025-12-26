@@ -6,7 +6,7 @@ import { Input } from '../components/Input';
 import { MagicTextArea } from '../components/MagicTextArea';
 import { ShareButton } from '../components/ShareButton';
 import { generateAudit } from '../services/gemini';
-import { db } from '../services/db';
+
 import { toast } from '../services/toast';
 import { User, AuditResult } from '../types';
 
@@ -19,7 +19,7 @@ export const AgencyDashboard: React.FC<AgencyDashboardProps> = ({ user, updateUs
   const [clientNiche, setClientNiche] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AuditResult | null>(null);
-  const [saving, setSaving] = useState(false);
+
 
   const handleAudit = async () => {
       if(!clientNiche) return;
@@ -40,13 +40,7 @@ export const AgencyDashboard: React.FC<AgencyDashboardProps> = ({ user, updateUs
       }
   };
 
-  const handleSave = async () => {
-      if(!result) return;
-      setSaving(true);
-      await db.saved.add(user.id, 'audit', result, `Audit: ${result.clientNiche}`, 'Agency');
-      setSaving(false);
-      toast.success('Audit saved successfully!');
-  };
+
 
   return (
     <div className="space-y-8 pb-12">
@@ -109,11 +103,7 @@ export const AgencyDashboard: React.FC<AgencyDashboardProps> = ({ user, updateUs
                     </ul>
                 </Card>
                 
-                <div className="md:col-span-2 flex justify-end">
-                     <Button onClick={handleSave} disabled={saving} variant="secondary">
-                         {saving ? 'Saving...' : 'Save Audit to History'}
-                     </Button>
-                </div>
+
             </div>
         )}
     </div>

@@ -1,166 +1,219 @@
 import React from 'react';
-import { User } from '../types';
-import { Card } from '../components/Card';
-import { TrendingUp, Users, Eye, MousePointer, ArrowUp, ArrowDown, Activity } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { BarChart3, Sparkles, MessageSquareText, TrendingUp, Calendar, Clock, Target, ArrowRight, Crown, User } from 'lucide-react';
+import { NavTab } from '../types';
 
 interface AnalyticsProps {
-  user: User;
+  onNavigate?: (tab: NavTab) => void;
 }
 
-export const Analytics: React.FC<AnalyticsProps> = ({ user }) => {
-  // Simulate data based on role
-  const isBusiness = user.role === 'business';
-  const isAgency = user.role === 'agency';
+export const Analytics: React.FC<AnalyticsProps> = ({ onNavigate }) => {
+  const { user, userProfile } = useAuth();
 
-  const stats = [
-    {
-      label: isBusiness ? 'Total Revenue' : isAgency ? 'Client Leads' : 'Total Views',
-      value: isBusiness ? '$12,450' : isAgency ? '48' : '1.2M',
-      change: '+12.5%',
-      trend: 'up',
-      icon: isBusiness ? <Activity className="w-5 h-5 text-emerald-500" /> : <Eye className="w-5 h-5 text-blue-500" />
-    },
-    {
-      label: isBusiness ? 'Conversion Rate' : 'Engagement Rate',
-      value: isBusiness ? '3.2%' : '8.4%',
-      change: '+2.1%',
-      trend: 'up',
-      icon: <MousePointer className="w-5 h-5 text-purple-500" />
-    },
-    {
-      label: 'Follower Growth',
-      value: '+2,450',
-      change: '-0.5%',
-      trend: 'down',
-      icon: <Users className="w-5 h-5 text-orange-500" />
-    },
-    {
-      label: 'Viral Score',
-      value: '85/100',
-      change: '+5.0',
-      trend: 'up',
-      icon: <TrendingUp className="w-5 h-5 text-pink-500" />
-    }
-  ];
+  if (!user || !userProfile) {
+    return (
+      <div className="animate-fade-in max-w-2xl mx-auto text-center py-12">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 mb-6 shadow-lg shadow-purple-500/25">
+          <BarChart3 className="w-10 h-10 text-white" />
+        </div>
+        <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-3">Your Analytics</h2>
+        <p className="text-lg text-slate-500 dark:text-slate-400 mb-8">Sign in to see your content creation stats and track your progress</p>
+        
+        <div className="flex flex-wrap justify-center gap-4">
+          <button
+            onClick={() => onNavigate?.('signin')}
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all flex items-center gap-2"
+          >
+            Sign In
+            <ArrowRight className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => onNavigate?.('signup')}
+            className="px-6 py-3 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200 dark:border-slate-700 hover:border-orange-500/50 transition-all"
+          >
+            Create Account
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate stats
+  const totalGenerated = userProfile.ideasGenerated + userProfile.captionsGenerated;
+  const todayGenerated = userProfile.dailyIdeasUsed + userProfile.dailyCaptionsUsed;
+  const daysActive = Math.max(1, Math.floor((Date.now() - (userProfile.createdAt?.toDate?.()?.getTime() || Date.now())) / (1000 * 60 * 60 * 24)));
+  const avgPerDay = Math.round(totalGenerated / daysActive);
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Analytics</h1>
-          <p className="text-slate-500 dark:text-slate-400">Track your content performance.</p>
+    <div className="animate-fade-in max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 mb-4">
+          <BarChart3 className="w-4 h-4 text-purple-500" />
+          <span className="text-sm font-medium text-purple-600 dark:text-purple-400">Analytics</span>
         </div>
-        <div className="flex gap-2">
-            <select className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm">
-                <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
-                <option>Last 90 Days</option>
-            </select>
-        </div>
+        <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-2">
+          Your Content Stats
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400">
+          Track your content creation journey
+        </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <div key={index} className="bg-white dark:bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl border border-slate-200 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-all">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
-                {stat.icon}
-              </div>
-              <div className={`flex items-center text-xs font-bold px-2 py-1 rounded-full ${
-                stat.trend === 'up' 
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-              }`}>
-                {stat.trend === 'up' ? <ArrowUp className="w-3 h-3 mr-1" /> : <ArrowDown className="w-3 h-3 mr-1" />}
-                {stat.change}
-              </div>
-            </div>
-            <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium">{stat.label}</h3>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{stat.value}</p>
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-lg hover:shadow-xl transition-shadow">
+          <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 mb-2">
+            <Sparkles className="w-5 h-5" />
+            <span className="text-sm font-medium">Ideas</span>
           </div>
-        ))}
-      </div>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{userProfile.ideasGenerated}</p>
+          <p className="text-xs text-slate-400 mt-1">Total generated</p>
+        </div>
 
-      {/* Charts Section */}
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Main Chart */}
-        <Card className="md:col-span-2 p-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">Growth Overview</h3>
-            <div className="h-64 flex items-end justify-between gap-2">
-                {[40, 65, 45, 80, 55, 90, 70, 85, 60, 95, 75, 100].map((height, i) => (
-                    <div key={i} className="w-full bg-slate-100 dark:bg-slate-700/50 rounded-t-lg relative group overflow-hidden">
-                        <div 
-                            className={`absolute bottom-0 left-0 right-0 transition-all duration-1000 ease-out ${
-                                isBusiness ? 'bg-indigo-500' : isAgency ? 'bg-emerald-500' : 'bg-orange-500'
-                            }`}
-                            style={{ height: `${height}%`, opacity: 0.8 }}
-                        ></div>
-                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    </div>
-                ))}
-            </div>
-            <div className="flex justify-between mt-4 text-xs text-slate-400 uppercase font-bold">
-                <span>Jan</span>
-                <span>Feb</span>
-                <span>Mar</span>
-                <span>Apr</span>
-                <span>May</span>
-                <span>Jun</span>
-                <span>Jul</span>
-                <span>Aug</span>
-                <span>Sep</span>
-                <span>Oct</span>
-                <span>Nov</span>
-                <span>Dec</span>
-            </div>
-        </Card>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-lg hover:shadow-xl transition-shadow">
+          <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400 mb-2">
+            <MessageSquareText className="w-5 h-5" />
+            <span className="text-sm font-medium">Captions</span>
+          </div>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{userProfile.captionsGenerated}</p>
+          <p className="text-xs text-slate-400 mt-1">Total created</p>
+        </div>
 
-        {/* Side Stats */}
-        <div className="space-y-6">
-            <Card className="p-6">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Top Platforms</h3>
-                <div className="space-y-4">
-                    {[
-                        { name: 'Instagram', val: 78, color: 'bg-pink-500' },
-                        { name: 'TikTok', val: 64, color: 'bg-black dark:bg-white' },
-                        { name: 'LinkedIn', val: 42, color: 'bg-blue-600' }
-                    ].map(p => (
-                        <div key={p.name}>
-                            <div className="flex justify-between text-sm mb-1">
-                                <span className="font-medium dark:text-slate-300">{p.name}</span>
-                                <span className="text-slate-500">{p.val}%</span>
-                            </div>
-                            <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                                <div className={`h-full ${p.color}`} style={{ width: `${p.val}%` }}></div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </Card>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-lg hover:shadow-xl transition-shadow">
+          <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-2">
+            <TrendingUp className="w-5 h-5" />
+            <span className="text-sm font-medium">Total</span>
+          </div>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{totalGenerated}</p>
+          <p className="text-xs text-slate-400 mt-1">All content</p>
+        </div>
 
-            <Card className="p-6 bg-gradient-to-br from-slate-900 to-slate-800 text-white border-none">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-white/10 rounded-lg">
-                        <SparklesIcon className="w-5 h-5 text-yellow-400" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold">AI Insight</h3>
-                        <p className="text-xs text-slate-400">Daily Tip</p>
-                    </div>
-                </div>
-                <p className="text-sm text-slate-300 leading-relaxed">
-                    "Your video content on Tuesdays gets <strong>2.5x more engagement</strong>. Try posting your next reel tomorrow at 6 PM."
-                </p>
-            </Card>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-lg hover:shadow-xl transition-shadow">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+            <Target className="w-5 h-5" />
+            <span className="text-sm font-medium">Today</span>
+          </div>
+          <p className="text-3xl font-bold text-slate-900 dark:text-white">{todayGenerated}</p>
+          <p className="text-xs text-slate-400 mt-1">Generated today</p>
         </div>
       </div>
+
+      {/* Usage Today */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 mb-6 shadow-lg">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+          <Clock className="w-5 h-5 text-orange-500" />
+          Today's Usage
+        </h3>
+        
+        <div className="space-y-5">
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-orange-500" />
+                Ideas Generated
+              </span>
+              <span className="font-medium text-slate-900 dark:text-white">
+                {userProfile.dailyIdeasUsed} / {userProfile.subscription === 'free' ? '5' : '∞'}
+              </span>
+            </div>
+            <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-orange-500 to-pink-500 rounded-full transition-all duration-500"
+                style={{ 
+                  width: userProfile.subscription === 'free' 
+                    ? `${Math.min(userProfile.dailyIdeasUsed / 5 * 100, 100)}%`
+                    : '10%'
+                }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                <MessageSquareText className="w-4 h-4 text-teal-500" />
+                Captions Created
+              </span>
+              <span className="font-medium text-slate-900 dark:text-white">
+                {userProfile.dailyCaptionsUsed} / {userProfile.subscription === 'free' ? '5' : '∞'}
+              </span>
+            </div>
+            <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full transition-all duration-500"
+                style={{ 
+                  width: userProfile.subscription === 'free' 
+                    ? `${Math.min(userProfile.dailyCaptionsUsed / 5 * 100, 100)}%`
+                    : '10%'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {userProfile.subscription === 'free' && (
+          <div className="mt-6 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-900/30">
+            <p className="text-sm text-orange-700 dark:text-orange-300">
+              You have {Math.max(0, 5 - userProfile.dailyIdeasUsed)} ideas and {Math.max(0, 5 - userProfile.dailyCaptionsUsed)} captions remaining today.
+              <button 
+                onClick={() => onNavigate?.('pricing')}
+                className="ml-2 font-semibold underline hover:no-underline"
+              >
+                Upgrade for unlimited
+              </button>
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Average Stats */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 mb-6 shadow-lg">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-purple-500" />
+          Activity Summary
+        </h3>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{avgPerDay}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Avg. per day</p>
+          </div>
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{daysActive}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Days active</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Subscription Status */}
+      <button
+        onClick={() => onNavigate?.('pricing')}
+        className="w-full bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all group"
+      >
+        <div className="flex items-center justify-between">
+          <div className="text-left">
+            <p className="text-white/80 text-sm mb-1">Current Plan</p>
+            <p className="text-2xl font-bold capitalize flex items-center gap-2">
+              <Crown className="w-6 h-6" />
+              {userProfile.subscription}
+            </p>
+          </div>
+          <div className="text-right">
+            {userProfile.subscription === 'free' ? (
+              <div className="flex items-center gap-2 text-lg font-semibold">
+                <span>Go Pro</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-white/80">Manage</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            )}
+          </div>
+        </div>
+      </button>
     </div>
   );
 };
-
-function SparklesIcon(props: any) {
-    return (
-        <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-    )
-}

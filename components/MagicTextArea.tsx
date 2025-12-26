@@ -5,7 +5,7 @@ import { Sparkles, Wand2 } from 'lucide-react';
 
 interface MagicTextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
     label?: string;
-    context: 'idea' | 'caption' | 'business' | 'agency';
+    context: 'idea' | 'caption';
     onEnhanced?: (newText: string) => void;
     user?: User | null;
 }

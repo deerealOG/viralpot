@@ -89,23 +89,4 @@ export const CaptionGeneratorSkeleton: React.FC = () => {
   );
 };
 
-export const HistorySkeleton: React.FC = () => {
-  return (
-    <div className="grid gap-6">
-      {[1, 2, 3].map(i => (
-        <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-3 mb-4">
-            <Skeleton className="h-6 w-16 rounded" />
-            <Skeleton className="h-4 w-24" />
-          </div>
-          <Skeleton className="h-6 w-64 mb-3" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-4/6" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
+
