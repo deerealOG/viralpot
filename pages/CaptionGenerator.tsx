@@ -31,10 +31,12 @@ import {
   Save,
   Trash2,
   ChevronRight,
-  Smartphone
+  Smartphone,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import ExportButton from '../components/ExportButton';
 
 interface CaptionGeneratorProps {
   user: User;
@@ -111,83 +113,92 @@ export function CaptionGenerator({ user, updateUser, onNavigate }: CaptionGenera
     setEditableCaptions(newCaptions);
   };
 
+  const [rewritingIndex, setRewritingIndex] = useState<number | null>(null);
+
+  const handleRewrite = async (index: number) => {
+    setRewritingIndex(index);
+    try {
+      const { rewriteViral } = await import('../services/gemini');
+      const optimized = await rewriteViral(editableCaptions[index], true);
+      updateCaption(index, optimized);
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { message: 'Caption virally optimized!', type: 'success' } 
+      }));
+    } catch (error) {
+      console.error('Rewrite error:', error);
+    } finally {
+      setRewritingIndex(null);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!topic.trim()) return;
-
-    if (!canGenerate('caption')) {
-      window.dispatchEvent(new CustomEvent('show-upgrade-modal', { 
-        detail: { feature: 'unlimited captions' } 
-      }));
-      return;
-    }
 
     setLoading(true);
     setResult(null);
     
     await incrementUsage('caption');
     
-    setTimeout(() => {
-      // Hyper-descriptive generation logic
-      const hooks = {
-        professional: `For ${audience || 'professionals'} looking to master ${topic} in 2025: here is the data-driven approach.`,
-        casual: `Can we talk about ${topic} for a second? 😅 If you're a ${audience || 'creator'}, you need to see this.`,
-        bold: `The ${topic} market is saturated. Here's why ${audience || 'most people'} are failing and how to win.`,
-        educational: `Breaking down the ${topic} framework into 3 actionable steps for ${audience || 'every beginner'}.`
-      };
-
-      const baseHook = hooks[selectedTone as keyof typeof hooks] || hooks.casual;
+    try {
+      // Import and call the real AI generation function
+      const { generateCaptions } = await import('../services/gemini');
+      const result = await generateCaptions(
+        topic,
+        selectedTone,
+        selectedPlatform,
+        selectedPostType,
+        audience,
+        [],
+        user.subscription !== 'free'
+      );
       
-      // Zero-Thinking Logic: Inject Topic-Specific Examples
-      const exampleMistake = topic.toLowerCase().includes('fitness') ? 'skipping recovery days' 
-        : topic.toLowerCase().includes('tech') ? 'chasing every new framework'
-        : topic.toLowerCase().includes('finance') ? 'ignoring compound interest'
-        : 'focusing on the wrong metrics';
-
-      const exampleNewStrategy = topic.toLowerCase().includes('fitness') ? 'Progressive Overload'
-        : topic.toLowerCase().includes('tech') ? 'Solid Fundamentals'
-        : topic.toLowerCase().includes('finance') ? 'Dollar Cost Averaging'
-        : 'Strategic Consistency';
-
-      const captions = [
-        `${baseHook}\n\nSuccess in ${topic} today isn't about working harder. It's about how ${audience || 'you'} can leverage ${exampleNewStrategy} to stand out. Here's my 3-step roadmap:\n\n1. Strategy: Stop ${exampleMistake}.\n2. Execution: Double down on what works.\n3. Growth: Scale using data, not feelings.\n\nWhat are your thoughts on this ${topic} shift? Let's discuss in the comments! 👇`,
-        `POV: You finally cracked the ${topic} code as a ${audience || 'busy professional'}.\n\nI spent months testing different approaches to ${topic}, and the biggest takeaway for ${audience || 'my community'} was that ${exampleMistake} is killing your growth. If you're currently stuck, this is your sign to try ${exampleNewStrategy}.\n\nSave this for your next ${topic} planning session! 📌`
-      ];
-
       setResult({
-        captions: lengthPref === 'short' ? captions.map(c => c.split('\n\n')[0] + '\n\n' + c.split('\n\n').pop()) : captions,
-        hashtags: ["#" + topic.replace(/\s+/g, ''), "#" + (audience || 'growth').replace(/\s+/g, ''), "#viralstudio", "#strategy", "#" + (topic.split(' ')[0] || 'fyp')],
-        overall_strategy: {
+        captions: result.captions || [],
+        hashtags: result.hashtags || [],
+        overall_strategy: (result as any).strategy || (result as any).overall_strategy || {
           bestTime: selectedPlatform === 'linkedin' ? "8:45 AM" : "7:15 PM",
-          postingTips: [`Ensure the '${selectedTone}' tone remains consistent throughout`, `Add a personal story in the first comment`],
-          visualAdvice: `Visuals for ${selectedPostType} should be high-contrast and professionally branded.`
+          postingTips: [`Use the '${selectedTone}' tone consistently`, `Engage with comments in first hour`],
+          visualAdvice: `Visuals for ${selectedPostType} should be high-contrast and branded.`
         },
         platform: selectedPlatform,
         tone: selectedTone,
         goal: 'engagement'
       });
+    } catch (error: any) {
+      console.error('Caption generation error:', error);
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { 
+          message: error.message || 'Failed to generate captions. Please try again.', 
+          type: 'error' 
+        } 
+      }));
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] font-sans">
-      <div className="max-w-[1600px] mx-auto p-4 lg:p-8 grid lg:grid-cols-[400px_1fr] gap-8 h-full">
+      <div className="max-w-[1600px] mx-auto p-4 lg:p-12 grid lg:grid-cols-[400px_1fr] gap-8 h-full">
         
         {/* Left Pane: Configuration Studio */}
         <aside className="space-y-6">
-          <div className="sticky top-8">
-            <div className="bg-white dark:bg-[#1e293b] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
-              <div className="bg-indigo-600 p-6 text-white">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-white/20 rounded-lg">
-                    <PenTool size={20} />
+          <div className="sticky top-8 space-y-6">
+            <div className="bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+              <div className="p-8 space-y-6">
+                
+                {/* Standardized Header */}
+                <div className="space-y-3 pb-2">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-linear-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-widest">
+                    <Sparkles size={12} className="animate-pulse" /> Viral Engine V5
                   </div>
-                  <h2 className="font-black tracking-tight text-xl uppercase">Writing Studio</h2>
+                  <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                    Caption Generator
+                  </h1>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed">
+                    Create high-engagement AI-optimized captions powered by Viral Engine V5.
+                  </p>
                 </div>
-                <p className="text-indigo-100 text-sm font-medium">Configure your professional content engine.</p>
-              </div>
-
-              <div className="p-6 space-y-8">
                 {/* Platform Selection */}
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
@@ -316,7 +327,12 @@ export function CaptionGenerator({ user, updateUser, onNavigate }: CaptionGenera
                 </div>
              </div>
              {result && (
-               <div className="flex items-center gap-2">
+               <div className="flex items-center gap-3">
+                  <ExportButton 
+                    content={editableCaptions} 
+                    filename={`captions_${topic.toLowerCase().replace(/\s+/g, '_')}`} 
+                    user={user} 
+                  />
                   <span className="px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                     <TrendingUp size={12} className="text-indigo-500" /> Score: 98%
                   </span>
@@ -361,6 +377,18 @@ export function CaptionGenerator({ user, updateUser, onNavigate }: CaptionGenera
                           <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Variation {index + 1}</span>
                        </div>
                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleRewrite(index)} 
+                            disabled={rewritingIndex === index}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all ${
+                              rewritingIndex === index 
+                                ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 text-orange-500'
+                                : 'border-slate-200 dark:border-slate-700 text-slate-400 hover:text-orange-500 hover:border-orange-500/30'
+                            }`}
+                          >
+                             {rewritingIndex === index ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} className="fill-current" />}
+                             <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Viral Rewrite</span>
+                          </button>
                           <button onClick={() => handleCopy(caption, index)} className="p-2 text-slate-400 hover:text-indigo-500 transition-colors">
                              {copiedIndex === index ? <Check size={18} /> : <Copy size={18} />}
                           </button>

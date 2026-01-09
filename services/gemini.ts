@@ -1,4 +1,4 @@
-import { IdeaResult, CaptionResult } from "../types";
+import { IdeaResult, CaptionResult, AuditResult, CampaignResult } from "../types";
 
 // Groq API Configuration
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
@@ -37,7 +37,7 @@ async function callGroqAPI(messages: { role: string; content: string }[], model:
 /**
  * Generate content using Groq API with model fallback
  */
-async function generateWithGroq(prompt: string): Promise<string> {
+async function generateWithGroq(prompt: string, specificModel?: string): Promise<string> {
   const messages = [
     {
       role: "system",
@@ -46,7 +46,10 @@ async function generateWithGroq(prompt: string): Promise<string> {
     { role: "user", content: prompt }
   ];
 
-  for (const model of MODELS) {
+  // If a specific model is requested (e.g. for Pro users), use it first
+  const modelsToTry = specificModel ? [specificModel, ...MODELS] : MODELS;
+
+  for (const model of modelsToTry) {
     try {
       console.log(`[Groq] Trying model: ${model}`);
       const result = await callGroqAPI(messages, model);
@@ -88,29 +91,59 @@ export const generateIdeas = async (
   topic: string, 
   tone: string, 
   platform: string, 
-  postType: string
-): Promise<IdeaResult> => {
-  const prompt = `Generate 3 viral content ideas for ${platform} ${postType} about "${topic}" with a ${tone} tone.
+  postType: string,
+  audience?: string,
+  goal?: string,
+  framework: string = 'standard',
+  isPro: boolean = false
+): Promise<any> => {
+  // Priority processing for Pro users
+  const model = isPro ? 'llama-3.3-70b-versatile' : 'llama3-8b-8192';
+  const audienceStr = audience ? `targeting ${audience}` : '';
+  const goalStr = goal ? `with the goal of ${goal}` : '';
+  const frameworkStr = framework !== 'standard' ? `using the ${framework.toUpperCase()} copywriting framework` : '';
+  
+  const prompt = `Generate 7 viral content ideas for ${platform} ${postType} about "${topic}" with a ${tone} tone ${audienceStr} ${goalStr} ${frameworkStr}.
 
 You are an expert content strategist. Create ideas that are:
 - Highly engaging and shareable
 - Tailored specifically to ${platform}'s audience and algorithm
 - Using current trends and best practices for ${postType} format
+- Each idea should have a detailed blueprint with hook, body structure, and CTA
 
 Return ONLY valid JSON in this exact format (no markdown, no extra text):
 {
-  "ideas": ["detailed idea 1 with specific angle", "detailed idea 2 with specific angle", "detailed idea 3 with specific angle"],
-  "hook": "A scroll-stopping hook that grabs attention in the first 2 seconds",
-  "strategy": {
-    "bestTime": "specific best posting time with timezone consideration",
-    "postingTips": ["actionable tip 1", "actionable tip 2", "actionable tip 3"],
-    "visualAdvice": "specific visual content advice for maximum engagement"
+  "ideas": [
+    {
+      "title": "Compelling idea title that makes people want to create this content",
+      "blueprint": {
+        "hook": "Attention-grabbing opening (first 2-3 seconds for video or first line for text)",
+        "body": "Main content structure with specific talking points or slides",
+        "cta": "Clear call-to-action that drives engagement"
+      },
+      "viral_score": 95,
+      "why_it_works": "Brief explanation of why this will perform well"
+    }
+  ],
+  "overall_strategy": {
+    "bestTime": "Specific best posting time",
+    "postingTips": ["tip1", "tip2", "tip3"],
+    "visualAdvice": "Visual content recommendations"
   }
-}`;
+}
+
+Generate exactly 7 unique ideas with viral_score between 75-99, sorted by score descending.`;
 
   try {
-    const result = await generateWithGroq(prompt);
-    return parseJSONResponse<IdeaResult>(result);
+    const result = await generateWithGroq(prompt, model);
+    const parsed = parseJSONResponse<any>(result);
+    
+    // Sort ideas by viral score descending
+    if (parsed.ideas && Array.isArray(parsed.ideas)) {
+      parsed.ideas.sort((a: any, b: any) => (b.viral_score || 0) - (a.viral_score || 0));
+    }
+    
+    return parsed;
   } catch (error) {
     console.error("Generate ideas error:", error);
     throw new Error("Failed to generate ideas. Please try again.");
@@ -125,11 +158,16 @@ export const generateCaptions = async (
   tone: string, 
   platform: string, 
   postType: string,
-  images: string[] = []
+  audience?: string,
+  images: string[] = [],
+  isPro: boolean = false
 ): Promise<CaptionResult> => {
+  // Priority processing for Pro users
+  const model = isPro ? 'llama-3.3-70b-versatile' : 'llama3-8b-8192';
   const imageContext = images.length > 0 ? ` The post includes ${images.length} image(s).` : '';
+  const audienceStr = audience ? ` for ${audience}` : '';
   
-  const prompt = `Create 3 social media captions for ${platform} ${postType} about "${topic}".${imageContext}
+  const prompt = `Create 7 social media captions for ${platform} ${postType} about "${topic}"${audienceStr}.${imageContext}
 
 Tone: ${tone}
 
@@ -138,16 +176,20 @@ You are an expert copywriter. Create captions that are:
 - Designed to maximize engagement (likes, comments, shares)
 - Using platform-appropriate language and emoji usage
 
-Create these 3 caption styles:
-1. SHORT & PUNCHY: 1-2 lines, high impact, scroll-stopping
-2. ENGAGING QUESTION: Medium length with a question or CTA that drives comments
-3. STORYTELLING: Longer format that provides value and builds connection
+Create 7 different caption variations ranging from:
+1. SHORT & PUNCHY (1-2 lines, high impact)
+2. QUESTION-BASED (drives comments)
+3. STORYTELLING (emotional connection)
+4. VALUE-DRIVEN (educational/tips)
+5. CONTROVERSIAL (bold takes)
+6. PERSONAL (authentic, relatable)
+7. CTA-FOCUSED (action-oriented)
 
 Also provide 15 highly relevant hashtags (mix of popular and niche-specific).
 
 Return ONLY valid JSON (no markdown, no extra text):
 {
-  "captions": ["short punchy caption here", "engaging question caption here", "storytelling caption here"],
+  "captions": ["caption 1", "caption 2", "caption 3", "caption 4", "caption 5", "caption 6", "caption 7"],
   "hashtags": ["hashtag1", "hashtag2", "hashtag3", "hashtag4", "hashtag5", "hashtag6", "hashtag7", "hashtag8", "hashtag9", "hashtag10", "hashtag11", "hashtag12", "hashtag13", "hashtag14", "hashtag15"],
   "strategy": {
     "bestTime": "specific best posting time for this content type",
@@ -168,7 +210,9 @@ Return ONLY valid JSON (no markdown, no extra text):
 /**
  * Rewrite a caption to make it more viral
  */
-export const rewriteViral = async (text: string): Promise<string> => {
+export const rewriteViral = async (text: string, isPro: boolean = false): Promise<string> => {
+  const model = isPro ? 'llama3-70b-8192' : 'llama3-8b-8192';
+  
   const prompt = `You are a viral content expert. Rewrite this social media caption to be extremely viral and engaging:
 
 "${text}"
@@ -179,11 +223,12 @@ Rules:
 - Add appropriate emojis (not too many)
 - Keep the core message but amplify the emotion
 - Make it feel personal and relatable
+- Use extreme viral hooks
 
 Return ONLY the rewritten caption, nothing else.`;
 
   try {
-    const result = await generateWithGroq(prompt);
+    const result = await generateWithGroq(prompt, model);
     return result.trim() || text;
   } catch (e) {
     console.error("Rewrite viral error:", e);
@@ -259,5 +304,60 @@ Return ONLY the text, nothing else.`;
   } catch (e) {
     console.error("Suggestion error", e);
     return "";
+  }
+};
+/**
+ * Generate a client audit for agencies
+ */
+export const generateAudit = async (niche: string): Promise<AuditResult> => {
+  const prompt = `Perform a comprehensive social media audit for a client in the "${niche}" industry.
+  
+  You are an expert agency strategist. Analyze the current landscape and provide:
+  1. Competitor Analysis: What are top competitors doing well? (Max 2 sentences)
+  2. Content Gaps: 3 specific opportunities mist competitors are missing.
+  3. Recommended Pillars: 3 strategic content pillars to dominate this niche.
+
+  Return ONLY valid JSON in this format:
+  {
+    "competitorAnalysis": "insight",
+    "contentGaps": ["gap 1", "gap 2", "gap 3"],
+    "recommendedPillars": ["pillar 1", "pillar 2", "pillar 3"]
+  }`;
+
+  try {
+    const result = await generateWithGroq(prompt);
+    return parseJSONResponse<AuditResult>(result);
+  } catch (error) {
+    console.error("Audit error:", error);
+    throw new Error("Failed to generate audit.");
+  }
+};
+
+/**
+ * Generate a business campaign strategy
+ */
+export const generateCampaign = async (product: string, goal: string): Promise<CampaignResult> => {
+  const prompt = `Create a 5-day social media campaign for "${product}" to achieve "${goal}".
+
+  Return ONLY valid JSON in this format:
+  {
+    "campaignName": "Creative Campaign Title",
+    "targetAudience": "Specific Audience Persona",
+    "kpi": "Primary Metric to Track",
+    "weeklyPlan": [
+      { "day": "Day 1", "focus": "Tease", "contentIdea": "Specific content idea" },
+      { "day": "Day 2", "focus": "Educate", "contentIdea": "Specific content idea" },
+      { "day": "Day 3", "focus": "Offer", "contentIdea": "Specific content idea" },
+      { "day": "Day 4", "focus": "Proof", "contentIdea": "Specific content idea" },
+      { "day": "Day 5", "focus": "Close", "contentIdea": "Specific content idea" }
+    ]
+  }`;
+
+  try {
+    const result = await generateWithGroq(prompt);
+    return parseJSONResponse<CampaignResult>(result);
+  } catch (error) {
+    console.error("Campaign error:", error);
+    throw new Error("Failed to generate campaign.");
   }
 };

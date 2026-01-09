@@ -30,9 +30,9 @@ export const getCreditTasks = (user: any): CreditTask[] => {
   return [
     {
       id: 'daily_login',
-      title: '🎁 Daily Login Bonus',
-      description: 'Claim 2 free credits every day',
-      reward: 2,
+      title: '🎁 Welcome',
+      description: 'You have unlimited access!',
+      reward: 9999,
       completed: !canClaimDaily,
       canClaim: canClaimDaily,
       type: 'daily',

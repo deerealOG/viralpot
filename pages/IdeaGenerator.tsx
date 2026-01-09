@@ -25,8 +25,12 @@ import {
   Heart,
   RotateCcw,
   ShieldCheck,
-  TrendingUp
+  TrendingUp,
+  Brain,
+  Rocket,
+  Download
 } from 'lucide-react';
+import ExportButton from '../components/ExportButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -95,6 +99,7 @@ export function IdeaGenerator({ user, updateUser, onNavigate }: IdeaGeneratorPro
   const [selectedPostType, setSelectedPostType] = useState<PostType>('reel');
   const [selectedTone, setSelectedTone] = useState('casual');
   const [selectedGoal, setSelectedGoal] = useState('engagement');
+  const [selectedFramework, setSelectedFramework] = useState('standard');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<IdeaResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -120,13 +125,6 @@ export function IdeaGenerator({ user, updateUser, onNavigate }: IdeaGeneratorPro
   const handleGenerate = async () => {
     if (!niche.trim()) return; // Prevent empty generation
 
-    if (!canGenerate('idea')) {
-      window.dispatchEvent(new CustomEvent('show-upgrade-modal', { 
-        detail: { feature: 'unlimited ideas' } 
-      }));
-      return;
-    }
-
     setLoading(true);
     setResult(null);
     setExpandedIndex(null);
@@ -134,183 +132,73 @@ export function IdeaGenerator({ user, updateUser, onNavigate }: IdeaGeneratorPro
     
     await incrementUsage('idea');
 
-    // Smart Generation Logic V4
-    setTimeout(() => {
-      const toneData = TONES.find(t => t.id === selectedTone) || TONES[1];
-      const goalData = GOALS.find(g => g.id === selectedGoal) || GOALS[0];
+    try {
+      // Import and call the real AI generation function
+      const { generateIdeas } = await import('../services/gemini');
+      const result = await generateIdeas(
+        niche,
+        selectedTone,
+        selectedPlatform,
+        selectedPostType,
+        audience,
+        selectedGoal,
+        selectedFramework,
+        user.subscription !== 'free'
+      );
       
-      const hooksByTone: Record<string, string[]> = {
-        professional: [
-          `The strategic framework for ${niche} that drives ROI.`,
-          `Why most ${audience || 'professionals'} are failing at ${niche}.`,
-          `Analysis: The future of ${niche} in 2025.`
-        ],
-        casual: [
-          `My honest thoughts on ${niche}... 🤭`,
-          `POV: You just mastered ${niche} as a ${audience || 'beginner'}.`,
-          `How to do ${niche} without the burnout.`
-        ],
-        controversial: [
-          `Stop listening to ${niche} "gurus". 🚩`,
-          `${niche} is dead. Here's what's actually working.`,
-          `Why I'm quitting ${niche} (and why you should too).`
-        ],
-        educational: [
-          `Step-by-step: How I handle ${niche}.`,
-          `The only ${niche} guide ${audience || 'you'} will ever need.`,
-          `3 tools that will 10x your ${niche} results.`
-        ]
-      };
-
-      const ctasByGoal: Record<string, string[]> = {
-        engagement: [
-          `Which one are you? Comment below! 👇`,
-          `Tag a friend who needs to see this! 🏷️`,
-          `Vote in my stories for the next topic!`
-        ],
-        sales: [
-          `DM me '${niche.toUpperCase()}' to get started! 📩`,
-          `Link in bio to join the ${niche} masterclass!`,
-          `Limited spots open for ${niche} coaching. Apply now!`
-        ],
-        growth: [
-          `Follow for daily ${niche} secrets! ✨`,
-          `Save this for your next ${niche} session! 📌`,
-          `Share this to your story if you agree!`
-        ]
-      };
-
-      const whyWorksByGoal: Record<string, string> = {
-        engagement: "Uses high-arousal emotion or relatable scenarios to trigger comments.",
-        sales: "Creates a specific pain-point realization and provides a direct solution path.",
-        growth: "Provides high-value 'saveable' content that builds authority and trust."
-      };
-
-      const selectedHooks = hooksByTone[selectedTone] || hooksByTone.casual;
-      const selectedCtas = ctasByGoal[selectedGoal] || ctasByGoal.engagement;
-
-      let generatedIdeas: IdeaDetail[] = [];
-
-      // SPECIAL LOGIC: X Threads (Hyper-Descriptive)
-      if (selectedPlatform === 'x' && selectedPostType === 'thread') {
-        generatedIdeas = [
-          {
-            title: `How ${audience || 'you'} can transform your ${niche} results by shifting to a 2025-first framework.`,
-            blueprint: {
-              hook: `If you're still using 2024 tactics for ${niche}, you're already behind. Here's the 5-step pivot ${audience || 'for creators'} (🧵)`,
-              body: `1/5: The ${niche} market has shifted. Here's the data...\n2/5: Stop focusing on [Common Mistake] and start [New Strategy].\n3/5: Real-world example: How I applied this to [Scenario].\n4/5: The exact tools you need for this ${niche} transition.\n5/5: Final takeaway for ${audience || 'your team'}.`,
-              cta: `I'm helping ${audience || 'my followers'} scale their ${niche} this month. RT to help another creator! 🔁`
-            },
-            viral_score: 98,
-            why_it_works: `Explicitly targets the fear of being outdated in ${niche}, which triggers high bookmark and RT rates from ${audience || 'your specific audience'}.`
-          }
-        ];
-      } 
-      // SPECIAL LOGIC: Instagram Carousel (Hyper-Descriptive)
-      else if (selectedPlatform === 'instagram' && selectedPostType === 'carousel') {
-        generatedIdeas = [
-          {
-            title: `The 3 ${niche} secrets ${audience || 'successful people'} never tell you about scaling.`,
-            blueprint: {
-              hook: `Slide 1: ${selectedHooks[1].replace('${niche}', niche)} (Stop scrolling if you want to master ${niche})`,
-              body: `Slide 2: The struggle of ${audience || 'most people'} in ${niche} today.\nSlide 3: Secret #1: The [Specific Concept] shift.\nSlide 4: Secret #2: Why [Specific Tool] is your best friend.\nSlide 5: Step-by-step roadmap for ${audience || 'you'}.`,
-              cta: `Check the link in bio for a deep dive into ${niche}! 📌`
-            },
-            viral_score: 94,
-            why_it_works: `Combines "Insider Secrets" curiosity with a clear roadmap for ${audience || 'beginners'}, optimizing for saves and shares.`
-          }
-        ];
-      }
-      // ZERO-THINKING VIDEO LOGIC (Reels/TikTok/Shorts)
-      else if (['reel', 'video', 'short', 'story'].includes(selectedPostType)) {
-         generatedIdeas = [
-          {
-            title: `POV: You finally stopped overcomplicating ${niche}.`,
-            blueprint: {
-              hook: `(0:00-0:03) Visual: You drinking coffee, looking unbothered. Text Overlay: 'When you realize ${niche} is actually simple...'`,
-              body: `(0:03-0:08) Audio/Script: "Stop trying to do everything. Just focus on one thing."\n(0:08-0:15) Visual: Quick cuts of you working/showing results. Script: "The moment I simplified my workflow for ${audience || 'clients'}, everything scaled."`,
-              cta: `Caption: Comment 'SIMPLE' and I'll send you my workflow! 👇`
-            },
-            viral_score: 96,
-            why_it_works: "Low-effort, high-relatability visual hook that stops the scroll immediately."
-          },
-          {
-            title: `The 'Green Screen' Rant: Why ${niche} is broken.`,
-            blueprint: {
-              hook: `(0:00-0:05) Visual: Green screen background of a trending ${niche} news article or chart. Script: "Does anyone else see what's happening in ${niche} right now?"`,
-              body: `(0:05-0:20) Script: "Everyone is telling you to X, but look at this data. The real production hack is actually Y. ${audience || 'Beginners'} are getting crushed because they ignore this."`,
-              cta: `Caption: Are you seeing this too? Let's argue in the comments. 🗣️`
-            },
-            viral_score: 92,
-            why_it_works: "Controversial opinion backed by 'proof' (green screen) drives massive comment engagement."
-          }
-        ];
-      }
-      // DEFAULT GENERATION (Hyper-Descriptive)
-      else {
-        generatedIdeas = [
-          {
-            title: `The mid-2025 ${niche} survival guide: How ${audience || 'you'} can navigate the new algorithm saturation.`,
-            blueprint: {
-              hook: `${selectedHooks[0].replace('${niche}', niche)} This isn't just about ${niche}, it's about staying relevant.`,
-              body: `Step 1: Audit your current ${niche} assets. Step 2: Identify where ${audience || 'your people'} are dropping off. Step 3: Implement the [New Strategy] technique.`,
-              cta: selectedCtas[0]
-            },
-            viral_score: 92 + Math.floor(Math.random() * 7),
-            why_it_works: `Addresses the problem of market saturation specifically for ${audience || 'those in the ' + niche + ' space'}.`
-          },
-          {
-            title: `Why ${audience || 'the traditional ' + niche + ' world'} is about to be disrupted by [Emerging Trend].`,
-            blueprint: {
-              hook: `${selectedHooks[1].replace('${niche}', niche)} The status quo in ${niche} is failing ${audience || 'us'}.`,
-              body: `Analysis: The rise of [Trend] and how it impacts ${niche}. Action: How ${audience || 'you'} can adapt before and during the shift.`,
-              cta: selectedCtas[1]
-            },
-            viral_score: 85 + Math.floor(Math.random() * 10),
-            why_it_works: `Leverages a "${selectedTone}" tone to create a sense of urgency and authority around ${niche} for ${audience || 'your followers'}.`
-          }
-        ];
-      }
-
+      // Map the API response to our expected format
       setResult({
-        ideas: generatedIdeas,
-        overall_strategy: {
+        ideas: result.ideas || [],
+        overall_strategy: result.overall_strategy || {
           bestTime: selectedPlatform === 'linkedin' ? "8:30 AM" : "7:00 PM",
           postingTips: [
             `Post on ${selectedPlatform} with trending assets matched to a '${selectedTone}' vibe`,
             `The ${selectedTone} tone works best when you show a "behind the scenes" look`,
             `For ${selectedGoal} goals, reply to every comment in the first 60 mins`
           ],
-          visualAdvice: `Use high-contrast text overlays. Since you're targeting ${audience || 'a broad audience'}, keep visuals clean and professional.`
+          visualAdvice: `Use high-contrast text overlays for ${audience || 'your audience'}.`
         },
         platform: selectedPlatform,
         postType: selectedPostType,
         tone: selectedTone,
         goal: selectedGoal
       });
+    } catch (error: any) {
+      console.error('AI Generation error:', error);
+      // Show error toast
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { 
+          message: error.message || 'Failed to generate ideas. Please try again.', 
+          type: 'error' 
+        } 
+      }));
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const currentPlatformInfo = PLATFORMS.find(p => p.id === selectedPlatform);
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-slate-50 dark:bg-[#0B1120] overflow-hidden">
-      
-      {/* Left Pane: Configuration Studio */}
-      <aside className="w-full lg:w-[480px] bg-white dark:bg-[#111827] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full z-20 shadow-2xl">
-        <div className="p-6 md:p-8 flex-1 overflow-y-auto space-y-8 custom-scrollbar">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0f172a] font-sans">
+      <div className="max-w-[1600px] mx-auto p-4 lg:p-12 grid lg:grid-cols-[400px_1fr] gap-8 h-full">
+        
+        {/* Left Pane: Configuration Studio */}
+        <aside className="space-y-6">
+          <div className="sticky top-8 space-y-6">
+            <div className="bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
+              <div className="p-8 space-y-6">
           
           {/* Header */}
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-widest">
-              <Sparkles size={12} /> Viral Engine V5
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-linear-to-r from-orange-500/10 to-pink-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-[10px] font-black uppercase tracking-widest">
+              <Sparkles size={12} className="animate-pulse" /> Viral Engine V5
             </div>
             <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-              Idea Studio
+              Idea Generator
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-              Generate high-retention concepts for your next viral hit.
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed">
+              Generate high-retention content ideas powered by Viral Engine V5 scoring.
             </p>
           </div>
 
@@ -330,7 +218,7 @@ export function IdeaGenerator({ user, updateUser, onNavigate }: IdeaGeneratorPro
                          : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-800 text-slate-400 hover:border-orange-500/50 hover:bg-white dark:hover:bg-slate-800'
                      }`}
                    >
-                     {isSelected && <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-transparent" />}
+                     {isSelected && <div className="absolute inset-0 bg-linear-to-br from-orange-500/20 to-transparent" />}
                      <Icon size={24} className={`relative z-10 mb-2 ${isSelected ? 'text-orange-500' : 'group-hover:text-orange-500 transition-colors'}`} />
                      <span className="relative z-10 text-[10px] font-black uppercase tracking-tight">{platform.label.split(' ')[0]}</span>
                    </button>
@@ -386,6 +274,36 @@ export function IdeaGenerator({ user, updateUser, onNavigate }: IdeaGeneratorPro
                </div>
             </div>
 
+            {/* Advanced Frameworks */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pl-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Brain size={12} className="text-orange-500" /> Advanced Frameworks
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: 'standard', label: 'Standard', icon: Rocket },
+                  { id: 'aida', label: 'AIDA', icon: Target },
+                  { id: 'pas', label: 'PAS', icon: ShieldCheck },
+                  { id: 'story', label: 'Story', icon: Sparkles },
+                ].map((fw) => (
+                  <button
+                    key={fw.id}
+                    onClick={() => setSelectedFramework(fw.id)}
+                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-tight transition-all ${
+                      selectedFramework === fw.id 
+                        ? 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400' 
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500 hover:border-orange-200'
+                    }`}
+                  >
+                    <fw.icon size={12} />
+                    {fw.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2">
@@ -430,14 +348,16 @@ export function IdeaGenerator({ user, updateUser, onNavigate }: IdeaGeneratorPro
              </span>
            </button>
         </div>
-      </aside>
+            </div>
+          </div>
+        </aside>
 
       {/* Right Pane: Results Workspace */}
-      <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0B1120] relative custom-scrollbar">
+      <main className="flex-1 overflow-y-auto min-h-screen bg-slate-50 dark:bg-[#0B1120] relative custom-scrollbar">
          {/* Background Decoration */}
-         <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-orange-500/5 to-transparent pointer-events-none" />
+         <div className="absolute top-0 left-0 w-full h-[500px] bg-linear-to-b from-orange-500/5 to-transparent pointer-events-none" />
          
-         <div className="max-w-4xl mx-auto p-6 md:p-12 space-y-12 relative z-10">
+         <div className="max-w-4xl mx-auto p-6 lg:p-12 space-y-12 relative z-10">
            {!result ? (
              <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6 opacity-40">
                <div className="w-24 h-24 rounded-3xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
@@ -598,6 +518,7 @@ export function IdeaGenerator({ user, updateUser, onNavigate }: IdeaGeneratorPro
            )}
          </div>
       </main>
+      </div>
     </div>
   );
 }

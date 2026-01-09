@@ -9,6 +9,7 @@ export interface User {
   platforms?: string[];
   bio?: string;
   onboardingCompleted?: boolean;
+  subscription: 'free' | 'pro' | 'business';
   isGuest?: boolean;
 }
 
@@ -51,4 +52,26 @@ export interface CaptionResult {
   goal: string;
 }
 
-export type NavTab = "home" | "idea" | "caption" | "contact" | "info" | "signin" | "signup" | "pricing" | "profile" | "analytics";
+export interface AuditResult {
+  competitorAnalysis: string;
+  contentGaps: string[];
+  recommendedPillars: string[];
+}
+
+export interface WeeklyPlanItem {
+  day: string;
+  focus: string;
+  contentIdea: string;
+}
+
+export interface CampaignResult {
+  campaignName: string;
+  targetAudience: string;
+  kpi: string;
+  weeklyPlan: WeeklyPlanItem[];
+}
+
+
+
+
+export type NavTab = "home" | "idea" | "caption" | "business" | "contact" | "info";

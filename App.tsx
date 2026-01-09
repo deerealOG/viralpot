@@ -6,13 +6,8 @@ import { IdeaGenerator } from './pages/IdeaGenerator';
 import { CaptionGenerator } from './pages/CaptionGenerator';
 import { Contact } from './pages/Contact';
 import { Info } from './pages/Info';
-import { SignIn } from './pages/SignIn';
-import { SignUp } from './pages/SignUp';
-import { Pricing } from './pages/Pricing';
-import { Profile } from './pages/Profile';
-import { Analytics } from './pages/Analytics';
-import { UpgradeModal } from './components/UpgradeModal';
-import { UpgradeBanner } from './components/UpgradeBanner';
+import { BusinessHub } from './pages/BusinessHub';
+
 
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -28,8 +23,11 @@ const DEFAULT_USER: User = {
   onboardingCompleted: true,
   niche: 'General',
   bio: 'Content Creator',
+  subscription: 'free',
   isGuest: false
 };
+
+
 
 function AppContent() {
   const { user, userProfile, loading } = useAuth();
@@ -43,8 +41,47 @@ function AppContent() {
     type: 'info',
     isVisible: false
   });
+  
+  // Auth flow state removed
 
-  // Create a user object from auth or use default
+  
+  // Onboarding State
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('viralpot_onboarding_completed');
+  });
+
+  useEffect(() => {
+    // Only force onboarding for NEW authenticated users if they didn't do it as guest
+    if (!loading && user && userProfile) {
+      if (userProfile.onboardingCompleted === false && !localStorage.getItem('viralpot_onboarding_completed')) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [loading, user, userProfile]);
+
+  const handleOnboardingComplete = async (data: Partial<User>) => {
+    localStorage.setItem('viralpot_onboarding_completed', 'true');
+    setShowOnboarding(false);
+    
+    // Save onboarding data to Firestore if logged in
+    if (user) {
+      try {
+        const { doc, updateDoc } = await import('firebase/firestore');
+        const { db } = await import('./services/firebase');
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          niche: data.niche || 'General',
+          role: data.role || 'creator',
+          bio: data.bio || 'Content Creator',
+          onboardingCompleted: true
+        });
+      } catch (err) {
+        console.error('Error saving onboarding data:', err);
+      }
+    }
+  };
+
+  // Create a user object from auth (no more guest mode)
   const appUser: User = user ? {
     id: user.uid,
     email: user.email || '',
@@ -52,24 +89,15 @@ function AppContent() {
     role: 'creator',
     avatar: userProfile?.photoURL || user.photoURL || '',
     created_at: userProfile?.createdAt?.toDate?.()?.getTime() || Date.now(),
-    onboardingCompleted: true,
-    niche: 'General',
-    bio: 'Content Creator',
+    onboardingCompleted: userProfile?.onboardingCompleted ?? false,
+    niche: userProfile?.niche || 'General',
+    bio: userProfile?.bio || 'Content Creator',
+    subscription: userProfile?.subscription || 'free',
     isGuest: false
   } : DEFAULT_USER;
 
-  // Show floating banner for free users after a delay
-  useEffect(() => {
-    if (user && userProfile?.subscription === 'free') {
-      const timer = setTimeout(() => {
-        const dismissed = sessionStorage.getItem('upgrade_banner_dismissed');
-        if (!dismissed) {
-          setShowFloatingBanner(true);
-        }
-      }, 30000); // Show after 30 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [user, userProfile]);
+  // Floating banner removed
+
 
   // Initialize theme
   useEffect(() => {
@@ -130,6 +158,7 @@ function AppContent() {
 
   const handleAuthSuccess = () => {
     setActiveTab('home');
+    setShowOnboarding(false); // Ensure onboarding is hidden if they sign in
   };
 
   const handleDismissBanner = () => {
@@ -147,87 +176,52 @@ function AppContent() {
 
   const isFreeUser = user && userProfile?.subscription === 'free';
 
+  // Auth check removed - always allow access
+
+
   return (
-    <Layout 
-      activeTab={activeTab} 
-      onTabChange={setActiveTab} 
-      toggleTheme={toggleTheme} 
-      currentTheme={theme}
-    >
-      {activeTab === 'home' && (
-        <Home 
-          user={appUser} 
-          onNavigate={setActiveTab} 
-          onLogout={() => {}}
-        />
-      )}
-      {activeTab === 'idea' && (
-        <IdeaGenerator user={appUser} updateUser={updateUser} onNavigate={setActiveTab} />
-      )}
-      {activeTab === 'caption' && (
-        <CaptionGenerator user={appUser} updateUser={updateUser} onNavigate={setActiveTab} />
-      )}
-      {activeTab === 'contact' && (
-        <Contact />
-      )}
-      {activeTab === 'info' && (
-        <Info />
-      )}
-      {activeTab === 'signin' && (
-        <SignIn 
-          onNavigateToSignUp={() => setActiveTab('signup')}
-          onSuccess={handleAuthSuccess}
-          onForgotPassword={() => {}}
-        />
-      )}
-      {activeTab === 'signup' && (
-        <SignUp 
-          onNavigateToSignIn={() => setActiveTab('signin')}
-          onSuccess={handleAuthSuccess}
-        />
-      )}
-      {activeTab === 'pricing' && (
-        <Pricing 
-          onNavigateToSignUp={() => setActiveTab('signup')}
-          onNavigate={setActiveTab}
-        />
-      )}
-      {activeTab === 'profile' && (
-        <Profile 
-          onNavigateToPricing={() => setActiveTab('pricing')}
-          onLogout={() => setActiveTab('home')}
-        />
-      )}
-      {activeTab === 'analytics' && (
-        <Analytics onNavigate={setActiveTab} />
-      )}
+    <>
+      
+      <Layout 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        toggleTheme={toggleTheme} 
+        currentTheme={theme}
+      >
+        {activeTab === 'home' && (
+          <Home 
+            user={appUser} 
+            onNavigate={setActiveTab} 
+            onLogout={() => {}}
+          />
+        )}
+        {activeTab === 'idea' && (
+          <IdeaGenerator user={appUser} updateUser={updateUser} onNavigate={setActiveTab} />
+        )}
+        {activeTab === 'caption' && (
+          <CaptionGenerator user={appUser} updateUser={updateUser} onNavigate={setActiveTab} />
+        )}
+        {activeTab === 'contact' && (
+          <Contact />
+        )}
+        {activeTab === 'info' && (
+          <Info />
+        )}
 
-      {/* Floating Upgrade Banner for Free Users */}
-      {showFloatingBanner && isFreeUser && activeTab !== 'pricing' && (
-        <UpgradeBanner 
-          onNavigate={setActiveTab}
-          variant="floating"
-          message="Unlock unlimited AI generations"
-          dismissible
-          onDismiss={handleDismissBanner}
+        {activeTab === 'business' && (
+          <BusinessHub user={appUser} onNavigate={setActiveTab} />
+        )}
+
+
+
+        <Toast 
+          message={toastConfig.message}
+          type={toastConfig.type}
+          isVisible={toastConfig.isVisible}
+          onClose={() => setToastConfig(prev => ({ ...prev, isVisible: false }))}
         />
-      )}
-
-      {/* Upgrade Modal */}
-      <UpgradeModal 
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        onNavigate={setActiveTab}
-        feature={upgradeFeature}
-      />
-
-      <Toast 
-        message={toastConfig.message}
-        type={toastConfig.type}
-        isVisible={toastConfig.isVisible}
-        onClose={() => setToastConfig(prev => ({ ...prev, isVisible: false }))}
-      />
-    </Layout>
+      </Layout>
+    </>
   );
 }
 

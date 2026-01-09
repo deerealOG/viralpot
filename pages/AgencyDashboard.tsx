@@ -43,69 +43,116 @@ export const AgencyDashboard: React.FC<AgencyDashboardProps> = ({ user, updateUs
 
 
   return (
-    <div className="space-y-8 pb-12">
-        <div className="flex items-end justify-between">
-            <div>
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Client Success Hub</h2>
-                <p className="text-slate-500 dark:text-slate-400">Win more pitches and deliver expert audits in record time.</p>
+    <div className="flex flex-col lg:flex-row h-screen bg-slate-50 dark:bg-[#0B1120] overflow-hidden">
+      
+      {/* Left Pane: Configuration Studio */}
+      <aside className="w-full lg:w-[480px] bg-white dark:bg-[#111827] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full z-20 shadow-2xl">
+        <div className="p-6 md:p-8 flex-1 overflow-y-auto space-y-8 custom-scrollbar">
+          
+          {/* Header */}
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 text-[10px] font-black uppercase tracking-widest">
+              <span className="text-lg">⚡</span> Agency Mode
             </div>
-            <div className="bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 px-3 py-1 rounded-full text-xs font-bold uppercase">
-                Agency Mode
-            </div>
-        </div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Client Audit Hub
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+              Win pitches with instant, data-driven competitor analysis.
+            </p>
+          </div>
 
-        <Card title="Instant Client Audit">
-            <div className="flex flex-col gap-4">
+          <div className="space-y-6">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2">
+                  Client Niche / Industry <span className="text-teal-500">*</span>
+                </label>
                 <MagicTextArea 
-                    label="Client Niche / Industry"
                     placeholder="e.g. Luxury Real Estate in Miami..."
                     value={clientNiche}
                     onChange={(e) => setClientNiche(e.target.value)}
                     context="agency"
-                    className="h-24"
+                    className="min-h-[120px] bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 text-sm font-bold"
                     user={user}
                 />
-                <div className="w-full md:w-1/3 self-end">
-                    <Button fullWidth onClick={handleAudit} isLoading={loading} className="h-12 mb-2">Run Audit</Button>
-                </div>
-            </div>
-        </Card>
+              </div>
+          </div>
+        </div>
 
-        {result && (
-            <div className="grid md:grid-cols-2 gap-6 animate-fade-in-up">
-                <Card className="md:col-span-2 bg-slate-900 text-white border-slate-800">
-                    <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-lg font-bold text-emerald-400">Competitor Analysis</h3>
-                        <ShareButton title={`Audit for ${clientNiche}`} text={`Competitor Analysis: ${result.competitorAnalysis}`} className="bg-white/10 text-white hover:bg-white/20" />
+        <div className="p-6 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111827]">
+           <Button 
+             fullWidth 
+             onClick={handleAudit} 
+             isLoading={loading} 
+             disabled={!clientNiche}
+             className="py-4 text-lg font-black bg-teal-600 hover:bg-teal-500 shadow-lg shadow-teal-500/20"
+           >
+             RUN AUDIT
+           </Button>
+        </div>
+      </aside>
+
+      {/* Right Pane: Results Workspace */}
+      <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0B1120] relative custom-scrollbar">
+         {/* Background Decoration */}
+         <div className="absolute top-0 left-0 w-full h-[500px] bg-linear-to-b from-teal-500/5 to-transparent pointer-events-none" />
+         
+         <div className="max-w-4xl mx-auto p-6 md:p-12 space-y-12 relative z-10">
+           {!result ? (
+             <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6 opacity-40">
+               <div className="w-24 h-24 rounded-3xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
+                 <span className="text-4xl text-slate-400 dark:text-slate-600">📊</span>
+               </div>
+               <div className="space-y-2 max-w-sm">
+                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">Ready to Audit?</h3>
+                 <p className="text-slate-500">Enter a client niche on the left to generate a comprehensive strategy audit.</p>
+               </div>
+             </div>
+           ) : (
+             <div className="space-y-8 animate-fade-in-up">
+                 
+                 {/* Competitor Analysis Card */}
+                 <Card className="bg-slate-900 text-white border-slate-800 overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 blur-3xl -mr-16 -mt-16 rounded-full" />
+                    <div className="relative z-10 p-2">
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <span className="text-[10px] font-black text-teal-400 uppercase tracking-widest mb-1 block">Strategic Insight</span>
+                                <h3 className="text-2xl font-bold text-white">Competitor Analysis</h3>
+                            </div>
+                            <ShareButton title={`Audit for ${clientNiche}`} text={`Competitor Analysis: ${result.competitorAnalysis}`} className="bg-white/10 text-white hover:bg-white/20" />
+                        </div>
+                        <p className="text-slate-300 leading-relaxed text-lg font-medium">{result.competitorAnalysis}</p>
                     </div>
-                    <p className="text-slate-300 leading-relaxed">{result.competitorAnalysis}</p>
-                </Card>
+                 </Card>
 
-                <Card title="Content Gaps (Missed Opportunities)">
-                    <ul className="space-y-3">
-                        {result.contentGaps.map((gap, i) => (
-                            <li key={i} className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
-                                <span className="text-red-500 font-bold">✗</span>
-                                {gap}
-                            </li>
-                        ))}
-                    </ul>
-                </Card>
+                 <div className="grid md:grid-cols-2 gap-6">
+                    <Card title="⚠️ Content Gaps" className="border-l-4 border-l-red-500">
+                        <ul className="space-y-4 mt-2">
+                            {result.contentGaps.map((gap, i) => (
+                                <li key={i} className="flex items-start gap-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
+                                    <div className="mt-0.5 min-w-[20px] h-5 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xs font-bold">✗</div>
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{gap}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </Card>
 
-                <Card title="Recommended Strategy Pillars">
-                    <ul className="space-y-3">
-                        {result.recommendedPillars.map((pillar, i) => (
-                            <li key={i} className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
-                                <span className="text-green-500 font-bold">✓</span>
-                                {pillar}
-                            </li>
-                        ))}
-                    </ul>
-                </Card>
-                
-
-            </div>
-        )}
+                    <Card title="✅ Recommended Support" className="border-l-4 border-l-teal-500">
+                        <ul className="space-y-4 mt-2">
+                            {result.recommendedPillars.map((pillar, i) => (
+                                <li key={i} className="flex items-start gap-4 p-3 rounded-xl bg-teal-50 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-900/30">
+                                    <div className="mt-0.5 min-w-[20px] h-5 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center text-xs font-bold">✓</div>
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{pillar}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </Card>
+                 </div>
+             </div>
+           )}
+         </div>
+      </main>
     </div>
   );
 };

@@ -10,7 +10,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -20,7 +20,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
       {/* Modal */}
       <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-fade-in">
         {/* Header */}
-        <div className="relative h-32 bg-gradient-to-br from-orange-500 to-pink-500 flex items-center justify-center">
+        <div className="relative h-32 bg-linear-to-br from-orange-500 to-pink-500 flex items-center justify-center">
           <div className="absolute top-4 right-4">
             <button
               onClick={onClose}

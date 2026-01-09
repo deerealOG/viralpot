@@ -17,6 +17,8 @@
     "@capacitor/cli": "^7.4.4",
     "@capacitor/core": "^7.4.4",
     "@google/genai": "^1.30.0",
+    "@mdi/js": "^7.4.47",
+    "@mdi/react": "^1.6.1",
     "@stripe/stripe-js": "^8.5.3",
     "all": "^0.0.0",
     "firebase": "^12.6.0",

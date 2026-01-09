@@ -45,7 +45,7 @@ export const Contact: React.FC = () => {
     <div className="animate-fade-in max-w-4xl mx-auto">
       {/* Header */}
       <div className="text-center mb-12">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 mb-6">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-linear-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 mb-6">
           <Mail className="w-4 h-4 text-blue-500" />
           <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Contact Us</span>
         </div>
@@ -123,7 +123,7 @@ export const Contact: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3.5 rounded-xl bg-linear-to-r from-orange-500 to-pink-500 text-white font-semibold shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>
@@ -186,7 +186,7 @@ export const Contact: React.FC = () => {
           </a>
 
           {/* Live Chat Card */}
-          <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white shadow-lg">
+          <div className="bg-linear-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white shadow-lg">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
                 <MessageCircle className="w-6 h-6 text-white" />

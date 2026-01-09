@@ -17,23 +17,10 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onN
   if (!isOpen) return null;
 
   const handleUpgrade = async () => {
-    setLoading(true);
-    try {
-      await upgradeToPro();
-      // Show success state or close
-      onClose();
-      // Optionally navigate to home or show a success toast
-      window.dispatchEvent(new CustomEvent('show-toast', { 
-        detail: { message: 'Successfully upgraded to Pro! 🎉', type: 'success' }
-      }));
-    } catch (error) {
-      console.error(error);
-      window.dispatchEvent(new CustomEvent('show-toast', { 
-        detail: { message: 'Failed to upgrade. Please try again.', type: 'error' }
-      }));
-    } finally {
-      setLoading(false);
-    }
+    onClose();
+    window.dispatchEvent(new CustomEvent('show-toast', { 
+      detail: { message: 'You already have Pro features!', type: 'success' }
+    }));
   };
 
   return (
